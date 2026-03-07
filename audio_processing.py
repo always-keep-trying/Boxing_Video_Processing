@@ -2,8 +2,9 @@ import os
 import librosa
 import pandas as pd
 import numpy as np
+from datetime import datetime as dt
 from scipy import signal
-
+import matplotlib
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
@@ -23,6 +24,9 @@ class BoxingAudio:
     def __init__(self, audio_file: str):
         self.file = audio_file
         assert self.file.endswith('.mp3'), 'Only mp3 files are supported!'
+
+        self.output_path = os.path.abspath(os.path.join(os.path.dirname(self.file), '..', 'output'))
+
         self.data = None
         self.sample_rate = None
         self.times_full = None
@@ -73,20 +77,36 @@ class BoxingAudio:
         df.loc[:,'Delta']=df['Seconds'].diff(1)
         self.time_table_raw = df
         self.time_table_fixed = bell_time_analysis(self.time_table_raw)
+        print("Bell times processed")
+
+    def rename_output_file(self, out_file_name):
+
+        _, file_extention = os.path.splitext(out_file_name)
+
+        if os.path.exists(out_file_name):
+            # if file name exists, add current timestamp to filename
+            out_file_name = out_file_name.replace(file_extention,
+                                                  f'_{dt.now().strftime("%Y-%m-%d_%I_%M%p")}{file_extention}')
+        return out_file_name
 
     def save(self):
+
         out_file_name = os.path.join(
-            os.path.dirname(self.file),
+            self.output_path,
             os.path.basename(self.file).replace('.mp3','.xlsx'))
 
+        out_file_name = self.rename_output_file(out_file_name)
+
         with pd.ExcelWriter(out_file_name, engine='xlsxwriter') as W:
-            self.time_table_fixed.to_excel(W, sheet_name='Rounds')
-            self.time_table_raw.to_excel(W, sheet_name='Raw_Times')
+            self.time_table_fixed.to_excel(W, sheet_name='Rounds', index=False)
+            self.time_table_raw.drop(columns=['half_min']).to_excel(W, sheet_name='Raw_Times', index=False)
+
+        print("Time tables saved to excel file in /output folder")
 
     def plot_signal(self):
-        import matplotlib
+        # run on backend
         matplotlib.use('Agg')
-        f, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(14, 10))
+        f, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(14, 10))
 
         # Time Series for Bell
         x_bell = self.times_full[0:- len(self.bell_data) + 1]
@@ -110,12 +130,21 @@ class BoxingAudio:
             x_fmt = fmt_time(int(x))
             ax2.text(x,y,x_fmt,rotation=45,verticalalignment='bottom')
         ax2.set_title('Warning Bell Selection')
+        plt.xlabel("Seconds")
 
         # time breakdown
         plt.suptitle(os.path.basename(self.file))
-        plt.savefig(self.file.replace('.mp3','_corr_plot.png'))
-        print('plot saved')
+        png_file_path = os.path.join(
+            self.output_path,os.path.basename(self.file).replace('.mp3','.png'))
+        png_file_path = self.rename_output_file(png_file_path)
+        plt.savefig(png_file_path)
+        print('Bell identification plot saved on /output folder')
 
+    def main(self):
+        print(self.__str__())
+        self.run()
+        self.plot_signal()
+        self.save()
 
 def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
     df['Delta'] = df['Delta'].fillna(0)
@@ -196,15 +225,15 @@ def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
     # fix missing format
     for idx in df.loc[df['Formatted_Time'].isna(),:].index.to_list():
         df.loc[idx,'Formatted_Time'] = fmt_time(int(df.loc[idx,'Seconds']))
+
+    df = df.loc[:,['Round','Formatted_Time','Bell_Details','Delta']]
+    df = df.rename(columns={'Formatted_Time':'TimeStamp','Bell_Details':'BellType','Delta':'SecondsFromLastBell'})
     return df
 
+
 if __name__ == "__main__":
-    #mp3_file_path = os.path.join(base_dir,'audio_sample.mp3')
-    mp3_file_path = os.path.join(base_dir, 'audio.mp3')
+    mp3_file_path = os.path.join(base_dir, 'input','audio_sample.mp3')
+    #mp3_file_path = os.path.join(base_dir, 'input', 'audio.mp3')
 
     audio = BoxingAudio(mp3_file_path)
-    print(audio)
-    audio.run()
-    audio.save()
-    #audio.plot_signal()
-    #audio.time_table_fixed.to_csv(os.path.join(base_dir,'audio_time_stamp_fixed_small.csv'))
+    audio.main()
