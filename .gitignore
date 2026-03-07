@@ -1,6 +1,11 @@
 test
 input/*
 output/*
+!output/READEME.pdf
+!output/READEME.numbers
+
+.DS_Store
+.idea/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
