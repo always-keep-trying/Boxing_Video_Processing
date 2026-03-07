@@ -79,8 +79,8 @@ class BoxingAudio:
         self.time_table_fixed = bell_time_analysis(self.time_table_raw)
         print("Bell times processed")
 
-    def rename_output_file(self, out_file_name):
-
+    @staticmethod
+    def rename_output_file(out_file_name):
         _, file_extention = os.path.splitext(out_file_name)
 
         if os.path.exists(out_file_name):
@@ -90,7 +90,6 @@ class BoxingAudio:
         return out_file_name
 
     def save(self):
-
         out_file_name = os.path.join(
             self.output_path,
             os.path.basename(self.file).replace('.mp3','.xlsx'))
