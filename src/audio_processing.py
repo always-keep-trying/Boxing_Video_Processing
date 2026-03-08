@@ -7,27 +7,28 @@ from scipy import signal
 import matplotlib
 import matplotlib.pyplot as plt
 from collections import defaultdict
-
-
+import shutil
+from support_functions import fmt_time
 base_dir = os.path.dirname(__file__)
 
-ref_path = os.path.join(base_dir,'audio_ref')
+ref_path = os.path.abspath(os.path.join(base_dir, '..','audio_ref'))
 bell_file = os.path.join(ref_path,'bell_ref.mp3')
 w_bell_file = os.path.join(ref_path,'warning_bell_ref.mp3')
 
 assert all(map(os.path.exists,[bell_file,w_bell_file])), 'Reference mp3 files are missing!'
 
-def fmt_time(seconds: int):
-    return f"{seconds//3600:02d}:{(seconds%3600)//60:02d}:{seconds%60:02d}"
 
 class BoxingAudio:
-    def __init__(self, audio_file: str):
+    def __init__(self, audio_file: str,output_path: str):
         self.file = audio_file
+        assert os.path.exists(self.file), f'Audio file missing!{self.file}'
         assert self.file.endswith('.mp3'), 'Only mp3 files are supported!'
 
-        self.output_path = os.path.abspath(os.path.join(os.path.dirname(self.file), '..', 'output'))
+        self.output_path = output_path
 
         self.data = None
+        self.data_lenth = None
+
         self.sample_rate = None
         self.times_full = None
 
@@ -38,6 +39,8 @@ class BoxingAudio:
         self.warn_bell_data = None
 
         self.load()
+
+        self.excel_file_path = None
 
     def load(self):
         self.data, self.sample_rate = librosa.load(self.file, sr=None)
@@ -61,8 +64,8 @@ class BoxingAudio:
         return list(map(int,x[peaks])), peaks, normalized_corr
 
     def __str__(self):
-        data_lenth = int(len(self.data)/self.sample_rate)
-        return "Audio File Length: "+fmt_time(data_lenth)+"(HH:MM:SS)"
+        self.data_lenth = int(len(self.data)/self.sample_rate)
+        return "Audio File Length: "+fmt_time(self.data_lenth)+"(HH:MM:SS)"
 
     def run(self):
 
@@ -89,10 +92,10 @@ class BoxingAudio:
                                                   f'_{dt.now().strftime("%Y-%m-%d_%I_%M%p")}{file_extention}')
         return out_file_name
 
-    def save(self):
+    def save_excel(self):
         out_file_name = os.path.join(
             self.output_path,
-            os.path.basename(self.file).replace('.mp3','.xlsx'))
+            "Bell_Times.xlsx")
 
         out_file_name = self.rename_output_file(out_file_name)
 
@@ -101,6 +104,7 @@ class BoxingAudio:
             self.time_table_raw.drop(columns=['half_min']).to_excel(W, sheet_name='Raw_Times', index=False)
 
         print("Time tables saved to excel file in /output folder")
+        self.excel_file_path = out_file_name
 
     def plot_signal(self):
         # run on backend
@@ -134,16 +138,26 @@ class BoxingAudio:
         # time breakdown
         plt.suptitle(os.path.basename(self.file))
         png_file_path = os.path.join(
-            self.output_path,os.path.basename(self.file).replace('.mp3','.png'))
+            self.output_path,
+            'Audio_Bell_Selection.png')
         png_file_path = self.rename_output_file(png_file_path)
         plt.savefig(png_file_path)
         print('Bell identification plot saved on /output folder')
+
+    def cleanup(self):
+        # once the process is finished move the mp3 file from input folder to output folder
+        try:
+            shutil.move(self.file,os.path.join(self.output_path,os.path.basename(self.file)))
+            print("Cleanup: Input file moved to output folder")
+        except Exception as e:
+            print(f"Cleanup process failed!: {e}")
 
     def main(self):
         print(self.__str__())
         self.run()
         self.plot_signal()
-        self.save()
+        self.save_excel()
+        self.cleanup()
 
 def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
     df['Delta'] = df['Delta'].fillna(0)
@@ -231,8 +245,8 @@ def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    mp3_file_path = os.path.join(base_dir, 'input','audio_sample.mp3')
-    #mp3_file_path = os.path.join(base_dir, 'input', 'audio.mp3')
+    #mp3_file_path = os.path.join(base_dir, 'input','audio_sample.mp3')
+    mp3_file_path = os.path.join(base_dir, 'input', 'audio.mp3')
 
     audio = BoxingAudio(mp3_file_path)
     audio.main()
