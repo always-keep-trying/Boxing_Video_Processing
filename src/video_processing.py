@@ -5,6 +5,9 @@ import datetime
 import glob
 import sys
 
+from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
+from moviepy.config import change_settings
+change_settings({"IMAGEMAGICK_BINARY": "magick"})
 
 class BoxingVideo:
 
@@ -104,6 +107,27 @@ class BoxingVideo:
         vid_list = glob.glob(os.path.join(self.project_dir,'*.mp4'))
         if len(vid_list)>0:
             sys.exit(f"Outputs already exists in: {self.project_dir}")
+
+
+def add_watermark(video_file_path, output_file_path,watermark_text=None):
+    if watermark_text is None:
+        watermark_text = 'Private - Do Not Share\nDo Not Post on Social Media'
+
+    video = VideoFileClip(video_file_path, audio=True)
+
+    watermark = (TextClip(watermark_text,
+                          fontsize=80,
+                          color='white',
+                          font='/System/Library/Fonts/Helvetica.ttc')
+                 .set_opacity(0.45)
+                 .set_duration(video.duration)
+                 .set_position(('center', 'center')))
+
+    final = CompositeVideoClip([video, watermark]).set_audio(video.audio)
+    final.write_videofile(output_file_path,
+                          audio=True,
+                          audio_codec='aac',
+                          logger=None)
 
 
 if __name__ == "__main__":
