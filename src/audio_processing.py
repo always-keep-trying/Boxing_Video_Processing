@@ -11,9 +11,9 @@ import shutil
 from support_functions import fmt_time
 base_dir = os.path.dirname(__file__)
 
-ref_path = os.path.abspath(os.path.join(base_dir, '..','audio_ref'))
-bell_file = os.path.join(ref_path,'bell_ref.mp3')
-w_bell_file = os.path.join(ref_path,'warning_bell_ref.mp3')
+ref_path = os.path.abspath(os.path.join(base_dir, '..','reference'))
+bell_file = os.path.join(ref_path,'audio', 'bell_ref.mp3')
+w_bell_file = os.path.join(ref_path,'audio', 'warning_bell_ref.mp3')
 
 assert all(map(os.path.exists,[bell_file,w_bell_file])), 'Reference mp3 files are missing!'
 

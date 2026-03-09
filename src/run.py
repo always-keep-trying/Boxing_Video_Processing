@@ -40,5 +40,5 @@ vid.cut_video_multiple(clips)
 print("finished")
 
 
-
-
+## TODO: add readme
+## TODO: need a frontend app (drag and drop, show status bar, wheel)
