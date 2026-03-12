@@ -57,7 +57,7 @@ class BoxingVideo:
                 (
                     ffmpeg
                     .input(self.file, ss=start, to=end)
-                    .output(video_output)
+                    .output(video_output, c='copy', avoid_negative_ts='make_zero')
                     .global_args('-loglevel', 'error')
                     .run(overwrite_output=True)
                 )
@@ -133,8 +133,12 @@ def add_watermark(video_file_path, output_file_path,watermark_text=None):
                  .set_duration(video.duration)
                  .set_position(('center', 'center')))
 
-    final = CompositeVideoClip([video, watermark]).set_audio(video.audio)
-    final.write_videofile(output_file_path,
-                          audio=True,
-                          audio_codec='aac',
-                          logger=None)
+    final = CompositeVideoClip([video, watermark]).set_duration(video.duration).set_audio(video.audio)
+    if video_file_path == output_file_path:
+        temp_path = video_file_path.replace('.mp4', '_temp.mp4')
+        final.write_videofile(temp_path, audio=True, audio_codec='aac', logger=None, remove_temp=True)
+        video.close()
+        os.replace(temp_path, video_file_path)
+    else:
+        final.write_videofile(output_file_path, audio=True, audio_codec='aac', logger=None, remove_temp=True)
+        video.close()

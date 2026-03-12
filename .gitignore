@@ -3,7 +3,8 @@ input/*
 output/*
 !output/READEME.pdf
 !output/READEME.numbers
-
+*.mp4
+*TEMP_MPY*
 .DS_Store
 .idea/*
 
