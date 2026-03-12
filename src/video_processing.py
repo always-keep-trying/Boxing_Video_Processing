@@ -9,6 +9,7 @@ from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 from moviepy.config import change_settings
 change_settings({"IMAGEMAGICK_BINARY": "magick"})
 
+
 class BoxingVideo:
 
     def __init__(self, video_file: str):
@@ -24,6 +25,7 @@ class BoxingVideo:
         print("Video taken: "+self.folder_name)
         self.audio_file = None
 
+        self.config = SF.get_config()
 
     def cut_video(self, out_video_file, start_time, end_time):
         (
@@ -46,17 +48,25 @@ class BoxingVideo:
         )
         print(f"MP3 file saved:{self.audio_file}")
 
-    def cut_video_multiple(self, clips):
-
+    def cut_video_multiple(self, clips, apply_watermark=True):
+        min_vid_length = self.config.getint('VIDEO','min_len')
         for i, (file_name, start, end) in enumerate(clips):
-            (
-                ffmpeg
-                .input(self.file, ss=start, to=end)
-                .output(os.path.join(self.project_dir,file_name))
-                .global_args('-loglevel', 'error')
-                .run(overwrite_output=True)
-            )
-            print(f"{file_name} Saved")
+            curr_vid_length = SF.fmt_to_seconds(end) - SF.fmt_to_seconds(start)
+            if curr_vid_length > min_vid_length:
+                video_output = os.path.join(self.project_dir,file_name)
+                (
+                    ffmpeg
+                    .input(self.file, ss=start, to=end)
+                    .output(video_output)
+                    .global_args('-loglevel', 'error')
+                    .run(overwrite_output=True)
+                )
+                if apply_watermark:
+                    add_watermark(video_output, video_output)
+                print(f"{file_name} Saved")
+            else:
+                print(f"Video {file_name} skipped as it was too short(length:{curr_vid_length} seconds)")
+
 
     def get_metadata(self, fields: list) -> dict:
 
@@ -128,9 +138,3 @@ def add_watermark(video_file_path, output_file_path,watermark_text=None):
                           audio=True,
                           audio_codec='aac',
                           logger=None)
-
-
-if __name__ == "__main__":
-    video_file = os.path.join('/Users/lukelee/Movies/Boxing','input', 'test.mp4')
-    # video_file = os.path.join('/Users/lukelee/Movies/video', 'VID20260223183734.mp4')
-    video = BoxingVideo(video_file)

@@ -4,6 +4,14 @@ from datetime import datetime
 import numpy as np
 import pytz
 import re
+import os
+from configparser import ConfigParser
+
+def get_config():
+    src_dir = os.path.dirname(__file__)
+    config = ConfigParser()
+    config.read(os.path.abspath(os.path.join(src_dir, '..', 'config.ini')))
+    return config
 
 def fmt_time(seconds: int):
     return f"{seconds//3600:02d}:{(seconds%3600)//60:02d}:{seconds%60:02d}"

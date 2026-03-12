@@ -8,12 +8,14 @@ import matplotlib
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import shutil
+import support_functions as SF
 from support_functions import fmt_time
 base_dir = os.path.dirname(__file__)
 
 ref_path = os.path.abspath(os.path.join(base_dir, '..','reference'))
 bell_file = os.path.join(ref_path,'audio', 'bell_ref.mp3')
 w_bell_file = os.path.join(ref_path,'audio', 'warning_bell_ref.mp3')
+
 
 assert all(map(os.path.exists,[bell_file,w_bell_file])), 'Reference mp3 files are missing!'
 
@@ -41,6 +43,7 @@ class BoxingAudio:
         self.load()
 
         self.excel_file_path = None
+        self.config = SF.get_config()
 
     def load(self):
         self.data, self.sample_rate = librosa.load(self.file, sr=None)
@@ -49,7 +52,7 @@ class BoxingAudio:
 
         self.times_full = np.linspace(0, len(self.data) / self.sample_rate, len(self.data))
 
-    def process(self, ref_data: np.ndarray, peak_seconds: int=10, corr_threshold: float=0.4):
+    def process(self, ref_data: np.ndarray, peak_seconds: int=10):
         corr = signal.correlate(self.data, ref_data, mode='valid')
 
         # Normalize it
@@ -60,6 +63,11 @@ class BoxingAudio:
         normalized_corr = corr / norm  # now bounded between -1 and +1
 
         x = self.times_full[0:- len(ref_data) + 1]
+        pct_threshold = self.config.getfloat('AUDIO', 'corr_threshold_pct')
+        corr_threshold = np.percentile(normalized_corr, pct_threshold*100)
+        corr_floor = self.config.getfloat('AUDIO', 'corr_floor')
+        corr_threshold = max(corr_threshold,corr_floor)
+        ## TODO: better way of doing this to have expectations around # of peaks per min
         peaks, _ = signal.find_peaks(normalized_corr, height=corr_threshold, distance=self.sample_rate*peak_seconds)
         return list(map(int,x[peaks])), peaks, normalized_corr
 
@@ -203,7 +211,6 @@ def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
         curr_bell = v['Bell_Details']
         curr_second = v['Seconds']
         diff = v['Diff']
-        new_slice = pd.DataFrame()
         new_type = ''
         if curr_bell == 'Warning':
             # adding a missing Start Bell
@@ -241,12 +248,5 @@ def bell_time_analysis(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.loc[:,['Round','Formatted_Time','Bell_Details','Delta']]
     df = df.rename(columns={'Formatted_Time':'TimeStamp','Bell_Details':'BellType','Delta':'SecondsFromLastBell'})
+    ## TODO: a round must have 3 bells! missing bells should be infered from the rest of bells
     return df
-
-
-if __name__ == "__main__":
-    #mp3_file_path = os.path.join(base_dir, 'input','audio_sample.mp3')
-    mp3_file_path = os.path.join(base_dir, 'input', 'audio.mp3')
-
-    audio = BoxingAudio(mp3_file_path)
-    audio.main()
