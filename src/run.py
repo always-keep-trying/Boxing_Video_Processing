@@ -44,9 +44,7 @@ clips.append(['End.mp4',df_spread.iloc[-1,:]['End'],  SF.fmt_time(audio.data_len
 vid.cut_video_multiple(clips)
 print("finished")
 
-# TODO: change audio corr threshold from hard value to percentile value
 ## TODO: add readme
-# TODO: need to add a keep endges (beginning and ending)
 ## TODO: need a frontend app (drag and drop, show status bar, wheel)
-# TODO: audio does it exist? if so laod the existing mp3 file and do not create a new one
+# TODO: audio does it exist? if so load the existing mp3 file and do not create a new one
 # TODO: for audio processing you can't too many rounds in a video, considering the shortest is 2 min and 30 seconds rest
