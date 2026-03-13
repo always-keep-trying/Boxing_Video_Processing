@@ -1,8 +1,8 @@
 test
 input/*
 output/*
-!output/READEME.pdf
-!output/READEME.numbers
+!output/README.pdf
+!output/README.numbers
 *.mp4
 *TEMP_MPY*
 .DS_Store
