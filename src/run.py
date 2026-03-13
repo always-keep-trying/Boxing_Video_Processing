@@ -9,7 +9,8 @@ input_dir = os.path.abspath(os.path.join(src_dir, '..', 'input'))
 output_dir = os.path.abspath(os.path.join(src_dir, '..', 'output'))
 
 #video_file = os.path.join(input_dir,'testing.mp4')
-video_file = os.path.join(input_dir,'VID20260309183144.mp4')
+video_file = os.path.join(input_dir,'VID20260223183734.mp4')
+#video_file = os.path.join(input_dir,'VID20260309183144.mp4')
 
 ## Video
 vid = BoxingVideo(video_file)
@@ -29,7 +30,9 @@ df_spread = df.pivot(index='Round', columns='BellType', values='TimeStamp')
 
 clips = []
 # add beginning
-clips.append(['Beginning.mp4',SF.fmt_time(0), df_spread['Start'][1] ])
+clips.append(
+    ['Beginning.mp4',SF.fmt_time(0), SF.offset_fmt_time(df_spread['Start'][1],-30) ]
+)
 bounds = [0, audio.data_lenth]
 for i,val in df_spread.iterrows():
     round_str = f"Round_{i}.mp4"
@@ -39,7 +42,9 @@ for i,val in df_spread.iterrows():
     end_time = SF.offset_fmt_time(end_time,+4, bounds)
     clips.append([round_str,start_time,end_time])
 # add end
-clips.append(['End.mp4',df_spread.iloc[-1,:]['End'],  SF.fmt_time(audio.data_lenth)])
+clips.append(
+    ['End.mp4',SF.offset_fmt_time(df_spread.iloc[-1,:]['End'],+30,[0,audio.data_lenth]),  SF.fmt_time(audio.data_lenth)]
+)
 
 vid.cut_video_multiple(clips)
 print("finished")
